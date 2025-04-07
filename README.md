@@ -17,7 +17,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-the_zipper = "0.1.0"
+the_zipper = "0.1.1"
 ```
 
 ## Usage
