@@ -6,7 +6,7 @@ license = "MIT"
 authors = ["Denys Bushuliak<bushuliak@proton.me>"]
 description = "A zipper is a data structure that allows you to traverse and modify a tree-like structure efficiently. It provides a way to navigate through the tree while keeping track of the context, enabling functional programming techniques."
 keywords = ["zipper", "data-structures", "tree", "cursor", "immutable"]
-categories = ["data structures", "algorithms", "tree"]
+categories = ["Data structures", "Algorithms", "Tree"]
 
 [dev-dependencies]
 cargo-llvm-cov = "0.6.16"
