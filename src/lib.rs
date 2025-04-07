@@ -230,6 +230,46 @@ mod test {
     }
 
     #[test]
+    fn test_for_readme() {
+        let tree = Tree::Section(vec![Tree::Item("a"), Tree::Item("+"), Tree::Item("b")]);
+
+        let location = Location::new(tree);
+
+        let location = location.go_down().unwrap();
+        assert_eq!(location.cursor, Tree::Item("a"));
+
+        let location = location.go_right().unwrap();
+        assert_eq!(location.cursor, Tree::Item("+"));
+
+        let location = location.go_left().unwrap();
+        assert_eq!(location.cursor, Tree::Item("a"));
+
+        let location = location.insert_right(Tree::Item(".")).unwrap();
+        assert_eq!(
+            location,
+            Location {
+                cursor: Tree::Item("a"),
+                path: Path::Node {
+                    left: vec![],
+                    right: vec![Tree::Item("."), Tree::Item("+"), Tree::Item("b")],
+                    path: Path::Node {
+                        left: vec![],
+                        right: vec![Tree::Section(vec![
+                            Tree::Item("a"),
+                            Tree::Item("+"),
+                            Tree::Item("b")
+                        ])],
+                        path: Path::Top.into()
+                    }
+                    .into()
+                }
+                .into()
+            }
+            .into()
+        );
+    }
+
+    #[test]
     fn test_go_left_none() {
         let tree = Tree::Section(vec![Tree::Item("a"), Tree::Item("+"), Tree::Item("b")]);
 
