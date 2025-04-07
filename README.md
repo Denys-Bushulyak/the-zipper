@@ -1,5 +1,7 @@
 # The Zipper
 
+![Crates.io](https://img.shields.io/crates/v/the_zipper)
+
 The Zipper is a Rust library designed to provide efficient and ergonomic utilities for working with data structures using the zipper pattern. This library simplifies navigation and modification of complex data structures while maintaining immutability.
 
 HUET G. The Zipper. Journal of Functional Programming. 1997;7(5):549-554. doi:10.1017/S0956796897002864
@@ -65,12 +67,15 @@ fn main() {
 }
 ```
 
+## Links
+
+(F# Implementation)[https://github.com/Denys-Bushulyak/the-zipper-fsharp]
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 <!-- 
 ---
-![Crates.io](https://img.shields.io/crates/v/the_zipper)
 ![Docs.rs](https://docs.rs/zipper_rust/badge.svg)
 ![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen) -->
