@@ -69,7 +69,7 @@ fn main() {
 
 ## Links
 
-[F# Implementation(https://github.com/Denys-Bushulyak/the-zipper-fsharp)
+[F# Implementation](https://github.com/Denys-Bushulyak/the-zipper-fsharp)
 
 ## License
 
