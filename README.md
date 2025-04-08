@@ -19,7 +19,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-the_zipper = "0.1.1"
+the_zipper = "0.1.2"
 ```
 
 ## Usage
@@ -75,7 +75,7 @@ fn main() {
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
-<!-- 
+<!--
 ---
 ![Docs.rs](https://docs.rs/zipper_rust/badge.svg)
 ![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen) -->
