@@ -13,6 +13,9 @@ exclude = ["target/", "benches/", "Makefile"]
 cargo-llvm-cov = "0.6.16"
 criterion = "0.5.1"
 
+[lib]
+bench = false
+
 [[bench]]
 name = "benchmark"
 harness = false
