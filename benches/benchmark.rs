@@ -67,64 +67,6 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             location.go_left().map(Location::go_right)
         })
     });
-    c.bench_function("get_nth", |b| {
-        b.iter(|| {
-            let location = black_box(Location::new(Tree::Section(vec![
-                Tree::Item("a"),
-                Tree::Item("+"),
-                Tree::Item("b"),
-                Tree::Item("*"),
-                Tree::Item("c"),
-            ])));
-
-            location.get_nth(2)
-        })
-    });
-    c.bench_function("memo_get_nth", |b| {
-        b.iter(|| {
-            let location = black_box(Location::new(Tree::Section(vec![
-                Tree::Item("a"),
-                Tree::Item("+"),
-                Tree::Item("b"),
-                Tree::Item("*"),
-                Tree::Item("c"),
-            ])));
-
-            let memo_location = location.with_memo();
-            memo_location.get_nth(2)
-        })
-    });
-    c.bench_function("repeated_get_nth", |b| {
-        b.iter(|| {
-            let location = black_box(Location::new(Tree::Section(vec![
-                Tree::Item("a"),
-                Tree::Item("+"),
-                Tree::Item("b"),
-                Tree::Item("*"),
-                Tree::Item("c"),
-            ])));
-
-            for _ in 0..5 {
-                let _ = location.clone().get_nth(2);
-            }
-        })
-    });
-    c.bench_function("repeated_memo_get_nth", |b| {
-        b.iter(|| {
-            let location = black_box(Location::new(Tree::Section(vec![
-                Tree::Item("a"),
-                Tree::Item("+"),
-                Tree::Item("b"),
-                Tree::Item("*"),
-                Tree::Item("c"),
-            ])));
-
-            let memo_location = location.with_memo();
-            for _ in 0..5 {
-                let _ = memo_location.clone().get_nth(2);
-            }
-        })
-    });
 }
 
 criterion_group!(benches, criterion_benchmark);
