@@ -5,10 +5,12 @@ install-dev-tools:
 	@echo "> Rust tools initialized"
 
 bench:
+	git stash; \
 	git switch ${BASELINE}; \
 	cargo bench -- --save-baseline ${BASELINE}; \
 
 	git switch -; \
+	git stash pop; \
 	cargo bench; \
 	cargo bench -- --load-baseline new --baseline ${BASELINE} --show-output
 
