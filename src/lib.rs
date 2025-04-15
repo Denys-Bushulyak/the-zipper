@@ -77,6 +77,9 @@
 //! This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 use std::rc::Rc;
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::hash::Hash;
 
 #[derive(Debug, Clone, PartialEq)]
 /// Represents a hierarchical tree structure.
@@ -119,6 +122,26 @@ pub struct Location<T: Clone> {
     pub cursor: Tree<T>,
     /// The path representing the context of this location within the overall tree.
     pub path: Rc<Path<T>>,
+}
+
+// Type alias for cache
+type Cache<T> = Rc<RefCell<HashMap<usize, Rc<Location<T>>>>>;
+
+// A wrapper that adds memoization capabilities
+#[derive(Clone)]
+pub struct MemoLocation<T: Clone + Eq + Hash> {
+    location: Rc<Location<T>>,
+    cache: Cache<T>,
+}
+
+impl<T: Clone + Eq + Hash> Location<T> {
+    // Memoized navigation function
+    pub fn with_memo(self) -> MemoLocation<T> {
+        MemoLocation {
+            location: Rc::new(self),
+            cache: Rc::new(RefCell::new(HashMap::new())),
+        }
+    }
 }
 
 impl<T: Clone> Location<T> {
@@ -389,6 +412,54 @@ impl<T: Clone> Location<T> {
                 result.into()
             }
         }
+    }
+}
+
+impl<T: Clone + Eq + Hash> MemoLocation<T> {
+    // Memoized version of get_nth
+    pub fn get_nth(self, n: usize) -> Option<Self> {
+        let cache_rc = self.cache.clone();
+        let cached_location = {
+            let cache = cache_rc.borrow();
+            cache.get(&n).cloned()
+        };
+
+        if let Some(cached) = cached_location {
+            return Some(MemoLocation {
+                location: cached,
+                cache: cache_rc,
+            });
+        }
+
+        // Calculate the result
+        let result = match n {
+            0 => self.location.as_ref().clone().go_down(),
+            _ => {
+                let mut loc = self.location.as_ref().clone().go_down()?;
+                for _ in 0..n {
+                    loc = loc.go_right()?;
+                }
+                Some(loc)
+            }
+        };
+
+        // Cache the result if it exists
+        if let Some(ref loc) = result {
+            let location_rc = Rc::new(loc.clone());
+            cache_rc.borrow_mut().insert(n, location_rc.clone());
+
+            Some(MemoLocation {
+                location: location_rc,
+                cache: cache_rc,
+            })
+        } else {
+            None
+        }
+    }
+
+    // Unwrap the inner Location
+    pub fn into_inner(self) -> Location<T> {
+        Rc::try_unwrap(self.location).unwrap_or_else(|rc| (*rc).clone())
     }
 }
 
@@ -968,6 +1039,175 @@ mod test {
             Some(Location {
                 cursor: Tree::Section(vec![]),
                 path: crate::Path::Top.into(),
+            })
+        );
+    }
+
+    #[test]
+    fn test_memo_get_nth() {
+        let tree = Tree::Section(vec![
+            Tree::Item("a"),
+            Tree::Item("+"),
+            Tree::Item("b"),
+            Tree::Item("*"),
+            Tree::Item("c"),
+        ]);
+
+        let location = Location::new(tree);
+        let memo_location = location.with_memo();
+
+        // Should calculate and cache
+        let first_access = memo_location.get_nth(2).unwrap();
+        assert_eq!(first_access.into_inner().cursor, Tree::Item("b"));
+    }
+
+    #[test]
+    fn test_memo_get_nth_cache_reuse() {
+        let tree = Tree::Section(vec![
+            Tree::Item("a"),
+            Tree::Item("+"),
+            Tree::Item("b"),
+            Tree::Item("*"),
+            Tree::Item("c"),
+        ]);
+
+        let location = Location::new(tree);
+        let memo_location = location.with_memo();
+
+        let memo_location = memo_location.get_nth(2).unwrap();
+
+        // Should use cache
+        let second_access = memo_location.get_nth(2).unwrap();
+        assert_eq!(second_access.into_inner().cursor, Tree::Item("b"));
+    }
+
+    #[test]
+    fn test_memo_get_nth_different_index() {
+        let tree = Tree::Section(vec![
+            Tree::Item("a"),
+            Tree::Item("+"),
+            Tree::Item("b"),
+            Tree::Item("*"),
+            Tree::Item("c"),
+        ]);
+
+        let location = Location::new(tree);
+        let memo_location = location.with_memo();
+
+        let diff_access = memo_location.get_nth(3).unwrap();
+        assert_eq!(diff_access.into_inner().cursor, Tree::Item("*"));
+    }
+
+    #[test]
+    fn test_memo_get_nth_out_of_bounds() {
+        let tree = Tree::Section(vec![
+            Tree::Item("a"),
+            Tree::Item("+"),
+            Tree::Item("b"),
+        ]);
+
+        let location = Location::new(tree);
+        let memo_location = location.with_memo();
+
+        assert!(memo_location.get_nth(5).is_none());
+    }
+
+    #[test]
+    fn test_memo_get_nth_into_inner() {
+        let tree = Tree::Section(vec![
+            Tree::Item("a"),
+            Tree::Item("+"),
+            Tree::Item("b"),
+        ]);
+
+        let location = Location::new(tree.clone());
+        let regular_location = location.get_nth(1).unwrap();
+
+        let memo_location = Location::new(tree).with_memo();
+        let memoized_inner_location = memo_location.get_nth(1).unwrap().into_inner();
+
+        assert_eq!(memoized_inner_location.cursor, regular_location.cursor);
+        assert_eq!(memoized_inner_location.cursor, Tree::Item("+"));
+    }
+
+    #[test]
+    fn test_memo_get_nth_complex_navigation() {
+        let tree = Tree::Section(vec![
+            Tree::Item("a"),
+            Tree::Section(vec![
+                Tree::Item("b1"),
+                Tree::Item("b2"),
+                Tree::Item("b3"),
+            ]),
+            Tree::Item("c"),
+        ]);
+
+        let location = Location::new(tree);
+
+        // Navigate to the Section, then memoize
+        let memo_section = location.clone()
+            .get_nth(1)
+            .unwrap()
+            .with_memo();
+
+        let b1 = memo_section.get_nth(0).unwrap();
+        assert_eq!(b1.location.cursor, Tree::Item("b1"));
+    }
+
+    #[test]
+    fn test_memo_get_nth_nested_navigation() {
+        let tree = Tree::Section(vec![
+            Tree::Item("a"),
+            Tree::Section(vec![
+                Tree::Item("b1"),
+                Tree::Item("b2"),
+                Tree::Item("b3"),
+            ]),
+            Tree::Item("c"),
+        ]);
+
+        let location = Location::new(tree);
+        let expected_b2 = location.clone()
+            .get_nth(1).unwrap()
+            .get_nth(1).unwrap();
+
+        let memo_section = location
+            .get_nth(1).unwrap()
+            .with_memo();
+
+        let b2 = memo_section.get_nth(1).unwrap();
+
+        assert_eq!(b2.location.cursor, expected_b2.cursor);
+        assert_eq!(b2.location.cursor, Tree::Item("b2"));
+    }
+
+    #[test]
+    fn test_memo_get_nth_with_path() {
+        let tree = Tree::Section(vec![Tree::Item("a"), Tree::Item("+"), Tree::Item("b")]);
+
+        let location = Location {
+            path: Path::Top.into(),
+            cursor: tree,
+        };
+        let memo_location = location.clone().with_memo();
+
+        let expected = location.get_nth(2);
+        let memo_result = memo_location.get_nth(2).map(|loc| loc.into_inner());
+
+        // Compare the full structure including path
+        assert_eq!(memo_result, expected);
+
+        // Compare path
+        assert_eq!(
+            memo_result,
+            Some(Location {
+                cursor: Tree::Item("b"),
+                path: Path::Node {
+                    left: vec![Tree::Item("+"), Tree::Item("a")],
+                    right: vec![],
+                    path: crate::Path::Top.into(),
+                }
+                    .into()
             })
         );
     }

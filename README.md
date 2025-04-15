@@ -55,6 +55,11 @@ fn main() {
         }
         .into()
     );
+
+    // For more complex and larger calculations, there is a memoized version of get_nth
+    let memo_location = location.with_memo();
+    let memo_location = memo_location.get_nth(0).unwrap(); // Calculated
+    let item_0_from_cache = memo_location.get_nth(0).unwrap(); // Retrieved from cache
 }
 ```
 
