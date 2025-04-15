@@ -1,28 +1,136 @@
+//! # The Zipper
+//!
+//! The Zipper is a Rust library designed to provide efficient and ergonomic utilities
+//! for working with data structures using the zipper pattern. This library simplifies
+//! navigation and modification of complex data structures while maintaining immutability.
+//!
+//! HUET G. The Zipper. *Journal of Functional Programming*. 1997;7(5):549–554.
+//! doi:[10.1017/S0956796897002864](https://doi.org/10.1017/S0956796897002864)
+//!
+//! ## Features
+//!
+//! - Easy-to-use API for zipper-based data manipulation.
+//! - Supports various data structures like trees and lists.
+//! - Lightweight and performant.
+//! - Code coverage is 100%.
+//!
+//! ## Installation
+//!
+//! Add the following to your `Cargo.toml`:
+//!
+//! ```toml
+//! [dependencies]
+//! the_zipper = "0.1.2"
+//! ```
+//!
+//! ## Usage
+//!
+//! ```rust
+//! use the_zipper::{Tree, Location, Path};
+//!
+//! fn main() {
+//!     let tree = Tree::Section(vec![Tree::Item("a"), Tree::Item("+"), Tree::Item("b")]);
+//!
+//!     let location = Location::new(tree);
+//!
+//!     let location = location.go_down().unwrap();
+//!     assert_eq!(location.cursor, Tree::Item("a"));
+//!
+//!     let location = location.go_right().unwrap();
+//!     assert_eq!(location.cursor, Tree::Item("+"));
+//!
+//!     let location = location.go_left().unwrap();
+//!     assert_eq!(location.cursor, Tree::Item("a"));
+//!
+//!     let location = location.insert_right(Tree::Item(".")).unwrap();
+//!     assert_eq!(
+//!         location,
+//!         Location {
+//!             cursor: Tree::Item("a"),
+//!             path: Path::Node {
+//!                 left: vec![],
+//!                 right: vec![Tree::Item("."), Tree::Item("+"), Tree::Item("b")],
+//!                 path: Path::Node {
+//!                     left: vec![],
+//!                     right: vec![Tree::Section(vec![
+//!                         Tree::Item("a"),
+//!                         Tree::Item("+"),
+//!                         Tree::Item("b")
+//!                     ])],
+//!                     path: Path::Top.into()
+//!                 }
+//!                 .into()
+//!             }
+//!             .into()
+//!         }
+//!         .into()
+//!     );
+//! }
+//! ```
+//!
+//! ## Links
+//!
+//! [F# Implementation](https://github.com/Denys-Bushulyak/the-zipper-fsharp)
+//!
+//! ## License
+//!
+//! This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
 use std::rc::Rc;
 
 #[derive(Debug, Clone, PartialEq)]
+/// Represents a hierarchical tree structure.
+///
+/// A tree can either be a single item or a section containing multiple trees.
 pub enum Tree<T: Clone> {
+    /// A single item value of type T.
     Item(T),
+    /// A collection of trees forming a section.
     Section(Vec<Tree<T>>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Represents a path within a tree, used for navigation and context tracking.
+///
+/// The path keeps track of the location in the tree structure,
+/// remembering the siblings to the left and right of the current position,
+/// as well as the path to the parent.
 pub enum Path<T: Clone> {
+    /// Represents the top level of the tree hierarchy.
     Top,
+    /// Represents a position within the tree structure.
     Node {
+        /// Trees to the left of the current position.
         left: Vec<Tree<T>>,
+        /// Trees to the right of the current position.
         right: Vec<Tree<T>>,
+        /// Path to the parent node.
         path: Rc<Path<T>>,
     },
 }
 
 #[derive(Debug, PartialEq, Clone)]
+/// Represents a location (cursor) within a tree.
+///
+/// A location combines a cursor pointing to the current tree node
+/// and a path providing context for navigation within the overall tree structure.
 pub struct Location<T: Clone> {
+    /// The current tree node being focused on.
     pub cursor: Tree<T>,
+    /// The path representing the context of this location within the overall tree.
     pub path: Rc<Path<T>>,
 }
 
 impl<T: Clone> Location<T> {
+    /// Creates a new location from a tree.
+    ///
+    /// # Arguments
+    ///
+    /// * `tree` - The tree to create a location from.
+    ///
+    /// # Returns
+    ///
+    /// A new `Location` instance with the given tree as cursor.
     pub fn new(tree: Tree<T>) -> Self {
         Self {
             cursor: tree.clone(),
@@ -34,6 +142,13 @@ impl<T: Clone> Location<T> {
             .into(),
         }
     }
+
+    /// Moves the cursor to the left sibling.
+    ///
+    /// # Returns
+    ///
+    /// * `Some(Location)` - If there is a left sibling.
+    /// * `None` - If there is no left sibling or the location is at the top.
     pub fn go_left(self) -> Option<Self> {
         match self.path.as_ref() {
             Path::Top => None,
@@ -49,6 +164,12 @@ impl<T: Clone> Location<T> {
         }
     }
 
+    /// Moves the cursor to the right sibling.
+    ///
+    /// # Returns
+    ///
+    /// * `Some(Location)` - If there is a right sibling.
+    /// * `None` - If there is no right sibling or the location is at the top.
     pub fn go_right(self) -> Option<Self> {
         match self.path.as_ref() {
             Path::Top => None,
@@ -64,6 +185,12 @@ impl<T: Clone> Location<T> {
         }
     }
 
+    /// Moves the cursor to the parent node.
+    ///
+    /// # Returns
+    ///
+    /// * `Some(Location)` - If there is a parent node.
+    /// * `None` - If the location is at the top.
     pub fn go_up(self) -> Option<Self> {
         match self.path.as_ref() {
             Path::Top => None,
@@ -84,6 +211,12 @@ impl<T: Clone> Location<T> {
         }
     }
 
+    /// Moves the cursor to the first child node.
+    ///
+    /// # Returns
+    ///
+    /// * `Some(Location)` - If the current node is a section with at least one child.
+    /// * `None` - If the current node is an item or an empty section.
     pub fn go_down(self) -> Option<Self> {
         match self.cursor {
             Tree::Item(_) => None,
@@ -99,6 +232,18 @@ impl<T: Clone> Location<T> {
         }
     }
 
+    /// Gets the nth child of the current node.
+    ///
+    /// This is equivalent to n calls to `go_right()`.
+    ///
+    /// # Arguments
+    ///
+    /// * `n` - The index of the child to navigate to.
+    ///
+    /// # Returns
+    ///
+    /// * `Some(Location)` - If the child exists.
+    /// * `None` - If the child doesn't exist or the current node is an item.
     pub fn get_nth(self, n: usize) -> Option<Self> {
         match n {
             0 => self.go_down(),
@@ -106,6 +251,15 @@ impl<T: Clone> Location<T> {
         }
     }
 
+    /// Replaces the current node with a new tree.
+    ///
+    /// # Arguments
+    ///
+    /// * `tree` - The new tree to replace the current node with.
+    ///
+    /// # Returns
+    ///
+    /// A new location with the updated cursor.
     pub fn change(self, tree: Tree<T>) -> Self {
         Self {
             cursor: tree,
@@ -113,6 +267,16 @@ impl<T: Clone> Location<T> {
         }
     }
 
+    /// Inserts a new tree to the right of the current node.
+    ///
+    /// # Arguments
+    ///
+    /// * `tree` - The tree to insert.
+    ///
+    /// # Returns
+    ///
+    /// * `Some(Location)` - If the insertion was successful.
+    /// * `None` - If the location is at the top.
     pub fn insert_right(self, tree: Tree<T>) -> Option<Self> {
         match self.path.as_ref() {
             Path::Top => None,
@@ -129,6 +293,16 @@ impl<T: Clone> Location<T> {
         }
     }
 
+    /// Inserts a new tree to the left of the current node.
+    ///
+    /// # Arguments
+    ///
+    /// * `tree` - The tree to insert.
+    ///
+    /// # Returns
+    ///
+    /// * `Some(Location)` - If the insertion was successful.
+    /// * `None` - If the location is at the top.
     pub fn insert_left(self, tree: Tree<T>) -> Option<Self> {
         match self.path.as_ref() {
             Path::Top => None,
@@ -145,6 +319,16 @@ impl<T: Clone> Location<T> {
         }
     }
 
+    /// Inserts a new tree as the first child of the current node.
+    ///
+    /// # Arguments
+    ///
+    /// * `tree` - The tree to insert.
+    ///
+    /// # Returns
+    ///
+    /// * `Some(Location)` - If the current node is a section.
+    /// * `None` - If the current node is an item.
     pub fn insert_down(self, tree: Tree<T>) -> Option<Self> {
         match self.cursor {
             Tree::Item(_) => None,
@@ -160,6 +344,12 @@ impl<T: Clone> Location<T> {
         }
     }
 
+    /// Deletes the current node and moves the cursor to a sibling or parent.
+    ///
+    /// # Returns
+    ///
+    /// * `Some(Location)` - If the deletion was successful.
+    /// * `None` - If the location is at the top.
     pub fn delete(self) -> Option<Self> {
         match self.path.as_ref() {
             Path::Top => None,
