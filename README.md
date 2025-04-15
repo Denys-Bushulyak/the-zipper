@@ -13,15 +13,6 @@ HUET G. The Zipper. Journal of Functional Programming. 1997;7(5):549-554. doi:10
 - Lightweight and performant.
 - Code coverage is 100%.
 
-## Installation
-
-Add the following to your `Cargo.toml`:
-
-```toml
-[dependencies]
-the_zipper = "0.1.2"
-```
-
 ## Usage
 
 ```rust
